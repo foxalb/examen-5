@@ -1,76 +1,13 @@
-var tablero=new Array(8);
-var dragSrcEl = null;
-var X_arrastrado=0;
-var Y_arrastrado=0;
-var X_adonde_se_mueve=0;
-var Y_adonde_se_mueve=0;
-var conteo_de_caramelos=0;
-var conteo_de_cajas=0;
-var movimientos=0;
-var puntaje=0;
-var tiempo=0;
-
-
-//guardamos el contenido que queremos cambiar para la transferencia al dejar de arrastrar
-function handleDragStart(e) {
-  dragSrcEl = this;
-  e.dataTransfer.effectAllowed = 'move';
-  e.dataTransfer.setData('text/html', this.innerHTML);
-  X_arrastrado=this.firstElementChild.x;
-  Y_arrastrado=this.firstElementChild.y;
-}
-
-function handleDragOver(e) {
-  if (e.preventDefault) {
-    e.preventDefault();
-  }
-  e.dataTransfer.dropEffect = 'move';  //efecto al mover
-  return false;
-}
-
-
-function handleDragLeave(e) {
-  this.classList.remove('over'); //eliminamos borde rojo en el estilo css
-}
-
-
-function handleDrop(e) {
-  if (e.stopPropagation) {
-    e.stopPropagation(); //evitamos abrir contenido en otra pagina al soltar
-  }
-	//hacemos el intercambio de contenido html de el elemento origne y destino
-	if (dragSrcEl != this){
-    X_adonde_se_mueve=this.firstElementChild.x;
-    Y_adonde_se_mueve=this.firstElementChild.y;
-    if ((X_adonde_se_mueve===X_arrastrado)&&(Y_adonde_se_mueve!=Y_arrastrado)){
-      resultado=Y_arrastrado-Y_adonde_se_mueve;
-      if ((resultado===74)||(resultado===-74)||(resultado===-75)||(resultado===75)){
-        dragSrcEl.innerHTML = this.innerHTML;
-        this.innerHTML = e.dataTransfer.getData('text/html');
-        this.classList.remove('over');
-        movimientos=movimientos+1;
-        $("#movimientos-text")["0"].innerText=movimientos;
-      }
-    }
-    else {
-      if ((Y_adonde_se_mueve===Y_arrastrado)&&(X_adonde_se_mueve!=X_arrastrado)){
-        resultado=X_arrastrado-X_adonde_se_mueve;
-        if ((resultado===118)||(resultado===-118)||(resultado===-118)||(resultado===118)){
-          dragSrcEl.innerHTML = this.innerHTML;
-          this.innerHTML = e.dataTransfer.getData('text/html');
-          this.classList.remove('over');
-          movimientos=movimientos+1;
-          $("#movimientos-text")["0"].innerText=movimientos;
-        }
-      }
-    }
-	}
-  verificar_combos()
-  return false;
-}
+var info_arrastrado = {columna: 0, fila: 0, imagen: 0}
+var info_movido = {columna: 0, fila: 0, imagen: 0}
 
 
 //animacion de letras
+function animacion_letras(){setTimeout(function(){
+  $(".main-titulo").css("color","white");
+  titulo_amarillo()
+},2000);
+}
 
 function titulo_amarillo(){setTimeout(function(){
    $(".main-titulo").css("color","yellow");
@@ -84,260 +21,347 @@ function titulo_blanco(){setTimeout(function(){
  },500);
 }
 
-function animacion_letras(){setTimeout(function(){
-  $(".main-titulo").css("color","white");
-  titulo_amarillo()
-},2000);
+
+//Llenar el tablero de caramelos
+function llenado_inicial(){
+  for (let i = 1; i <= 7; i++) { //por columnas
+    for (let j = 7; j >= 1; j--) {//por filas
+      $('.col-'+i).append(colocar_dulce(j))
+    }
+  }
 }
 
-// crea un numero entero al azar
 
+//Funcion que retorna un elemento html con un dulce aleatorio
+function colocar_dulce(fila,modo="aleatorio",nombre_imagen=0){
+var html_para_agregar="";
+  if(modo === "aleatorio"){
+    nombre_imagen = numero_entero_al_azar(1,4);
+  }
+  html_para_agregar =  '<div class="candycru fila'+fila+'"><img src="image/'+nombre_imagen+'.png" alt=""></div>'
+  return html_para_agregar
+}
+
+
+// crea un numero entero al azar
 function numero_entero_al_azar(minimo,maximo) {
   return Math.floor(Math.random() * (maximo - minimo + 1) + minimo);
 }
 
 
-//colocar la matriz Tablero inicializada
-function inicializar_matriz_tablero(){
-  for (i = 1; i < 8; i++){
-    tablero[i]= new Array(8);
-  }
-  for (i = 1; i < 8; i++){ //por columnas
-    for (var j = 1; j < 8; j++){//por filas
-      tablero[i][j]={id_div:"", nombreimagen:""};
+
+//verifica combos y actualiza tablero (completa dulces)
+function actualizar_puntaje(){
+  aplicar_animacion(seleccionar_combos())
+  asignacion_de_eventos_drag_drop()
+}
+
+
+//aplica animacion
+function aplicar_animacion(Combos_seleccionados){
+  for (let i = 0; i < Combos_seleccionados.length; i++) {
+    if (i == Combos_seleccionados.length - 1) {
+      $(Combos_seleccionados[i]).delay(200).effect('explode',800,function(){
+        revisar_dulces_y_tablero()
+        valor=Combos_seleccionados.length*2
+        Puntaje(Combos_seleccionados.length*2,'#score-text')
+      })
+    } else {
+      $(Combos_seleccionados[i]).delay(200).effect('explode',800)
     }
   }
 }
 
-
-//llena o reinicia el tablero
-function llenado_inicial(){
-var numero_imagen=0;
-$(".caja_dulce").detach();
-  for (var i = 1; i <= 7 ; i++) {//por columnas
-    for (var j = 1; j <= 7 ; j++) {//por filas
-      conteo_de_caramelos=conteo_de_caramelos+1;
-      conteo_de_cajas=conteo_de_cajas+1;
-      numero_imagen=numero_entero_al_azar(1,4);
-      imagen = '<div id="div' + conteo_de_cajas + '" class="caja_dulce" draggable="true"><img id="' + conteo_de_caramelos + '"class="caramelito" src="image/' + numero_imagen + '.png"></div>';
-      $(".col-"+i).prepend(imagen);
-    }
-  }
-}
-
-
-//llenado inicial o de reinicio del Tablero
-function colocar_dulce(columna){
-  conteo_de_caramelos=conteo_de_caramelos+1;
-  conteo_de_cajas=conteo_de_cajas+1;
-  numero_imagen=numero_entero_al_azar(1,4);
-  imagen = '<div id="div' + conteo_de_cajas + '" class="caja_dulce" draggable="true"><img id="' + conteo_de_caramelos + '"class="caramelito" src="image/' + numero_imagen + '.png"></div>';
-  $(".col-"+columna).prepend(imagen);
-}
-
-
-//verificar combos disponibles
-
- function verificar_combos(){
-
-   var para_eliminar=new Array(300);
-   var divs;
-   var valor1;
-   var valor2;
-   var valor3;
-   var conteo_eliminados=0;
-   var se_elimino="no";
-
-do {
-   //limpio el Tablero
-  conteo_eliminados=0
-  for (i = 1; i < 8; i++){ //por columnas
-    for (var j = 1; j < 8; j++){//por filas
-      tablero[i][j].id_div="";
-      tablero[i][j].nombreimagen="";
-    }
-  }
-  //llenar la matrix para luego revisarla
-
-   for (var i = 1; i < 8; i++) {
-      divs=$("div.col-"+i).children('div');
-      for (var j = 0; j < divs.length; j++) {
-        tablero[i][7-j].id_div=divs[j].id;
-        tablero[i][7-j].nombreimagen=$("#"+divs[j].id).find("img").attr("src");
+//cuales dulces hacen combo (alineados de 3 o mas)
+function seleccionar_combos(){
+  var Combos = []
+  for (let i = 1; i <= 7; i++) { //por columnas
+    for (let j = 1; j <= 5; j++) { //por filas
+      var Posicion_actual  = '.fila'+j+' img'
+      var Posicion_1='.fila'+(j+1)+' img'
+      var Posicion_2='.fila'+(j+2)+' img'
+      var dulce1 = $('.col-'+i).find(Posicion_actual).attr('src')
+      var dulce2 = $('.col-'+i).find(Posicion_1).attr('src')
+      var dulce3 = $('.col-'+i).find(Posicion_2).attr('src')
+      if((dulce1 == dulce2) && (dulce2 == dulce3)){
+        if (!Combos.includes('.col-'+i+' '+Posicion_actual)) {Combos.push('.col-'+i+' '+Posicion_actual) }
+        if (!Combos.includes('.col-'+i+' '+Posicion_1))   {Combos.push('.col-'+i+' '+Posicion_1) }
+        if (!Combos.includes('.col-'+i+' '+Posicion_2))   {Combos.push('.col-'+i+' '+Posicion_2) }
       }
     }
-
- // reviso por  filas
-   for (var i = 1; i < 8; i++) {
-     for (var j = 1; j < 6; j++) {
-       valor1=tablero[i][j].nombreimagen;
-       valor2=tablero[i][j+1].nombreimagen;
-       valor3=tablero[i][j+2].nombreimagen;
-       if ((valor1===valor2)&&(valor2===valor3)) {
-         for (var x = 0; x < 3; x++) {
-           conteo_eliminados=conteo_eliminados+1;
-           para_eliminar[conteo_eliminados]=tablero[i][j+x].id_div;
-         }
-       }
-     }
-   }
-
-   //reviso por  columnas
-     for (var i = 1; i < 8; i++) {
-       for (var j = 1; j < 6; j++) {
-         valor1=tablero[j][i].nombreimagen;
-         valor2=tablero[j+1][i].nombreimagen;
-         valor3=tablero[j+2][i].nombreimagen;
-         if ((valor1===valor2)&&(valor2===valor3)) {
-           for (var x = 0; x < 3; x++) {
-             conteo_eliminados=conteo_eliminados+1;
-             para_eliminar[conteo_eliminados]=tablero[j+x][i].id_div;
-           }
-         }
-       }
-     }
-     //elimina combos
-     if (conteo_eliminados>0) {
-       for (var i = 1; i <= conteo_eliminados; i++) {
-         $("#"+para_eliminar[i]).delay(800*i).fadeOut(0);
-         $("#"+para_eliminar[i]).detach();
-         se_elimino="si";
-         puntaje=puntaje+(conteo_eliminados*20);//cada dulce eliminado vale 20 puntos
-         $("#score-text")["0"].innerText=puntaje;
-       }
-     }
-
-} while (conteo_eliminados=0);
-if (se_elimino==="si"){
-  rellenar()
-}
-}
-
-
-
-
-//rellenar luego de eliminar combos
-function rellenar(){
-var divs;
-for (var i = 1; i < 8; i++) {
-  divs=$("div.col-"+i).children('div')
-  if (divs.length!=0 ){
-    for (var j = 1; j <= 7-divs.length; j++) {
-      colocar_dulce(i)
+  }
+  //Validación por filas
+  for (let i = 1; i <= 7; i++) { //por filas
+    var fila = $('.fila'+i);
+    for (let j = 1; j <= 5; j++) {//por columnas
+      var Posicion_actual  = '.col-'+j+' .fila'+i+' img'
+      var Posicion_1    = '.col-'+(j+1)+' .fila'+i+' img'
+      var Posicion_2    = '.col-'+(j+2)+' .fila'+i+' img'
+      var dulce1 = $(Posicion_actual).attr('src')
+      var dulce2 = $(Posicion_1).attr('src')
+      var dulce3 = $(Posicion_2).attr('src')
+      if((dulce1 == dulce2) && (dulce2 == dulce3)){
+        if (!Combos.includes(Posicion_actual)){Combos.push(Posicion_actual) }
+        if (!Combos.includes(Posicion_1)){Combos.push(Posicion_1) }
+        if (!Combos.includes(Posicion_2)){Combos.push(Posicion_2) }
+      }
     }
   }
-}
-eventos()
-verificar_combos()
+  return Combos;
 }
 
 
-//asignar evento pordrag and drop
+//Función que evalua estado de los dulces, los mueve y completa faltantes
+function revisar_dulces_y_tablero(){
+  var dulce_1 = undefined
+  var dulce_2 = undefined
+  var factor = 0
+  var antifactor = 0
+  var matriz_generada = undefined
 
-function eventos(){
+  for (let col = 1; col <= 7; col++) { //por columnas
+    for (let row = 1; row <= 8; row++) { //por fila
+      var filai = $('.col-'+col).find('.fila'+row+' img')
+      if (filai.is(':hidden')) {
+        factor += 1;
+        if (dulce_1 == undefined) { dulce_1 = filai; }
+      }
+      else if (row == 8){
+        if((dulce_1!=undefined)&&(dulce_2==undefined)){
 
-  cols = document.querySelectorAll("div[class^='col'] .caja_dulce");
-
-  [].forEach.call(cols, function(col) {
-    col.addEventListener('dragstart', handleDragStart, false);
-    col.addEventListener('dragover', handleDragOver, false);
-    col.addEventListener('dragleave', handleDragLeave, false);
-    col.addEventListener('drop', handleDrop, false);
-  });
-
-}
-
-
-//inicio del reloj en retroceso
-function conteo1(tiempo){setTimeout(function(){
-  tiempo-=1;
-  segundos=tiempo%60;
-  minutos=(tiempo-(tiempo%60))/60;
-  if (segundos<10) {
-    $("#timer").html("0"+minutos+":0"+segundos);
-  }else {
-    $("#timer").html("0"+minutos+":"+segundos);
+          filai = $('.col-'+col).find('.fila'+(row-1)+' img')
+          dulce_1 = filai; dulce_2 = filai
+          var desplazamiento = (96*factor).toString()
+          dulce_2.animate(
+            {
+              top: desplazamiento
+            },500 , function(){
+             if (matriz_generada == undefined ) {
+                matriz_generada = actualizar_html()
+                rellenar_de_nuevo(matriz_generada)
+              }
+            })
+        }
+      }
+      else{
+        if (dulce_1 != undefined) {
+          dulce_2 = filai
+          dulce_1.clone().insertAfter(dulce_2)
+          var desplazamiento = (96*factor).toString()
+          dulce_2.animate(
+            {
+              top: desplazamiento
+            },400, function(){
+              if (matriz_generada == undefined ) {
+                matriz_generada = actualizar_html()
+                rellenar_de_nuevo(matriz_generada)
+              }
+            })
+          row = 0
+          dulce_1 = undefined
+          dulce_2 = undefined
+          antifactor -= 1
+          factor = antifactor
+        }
+      }
+    }
+    dulce_1 = undefined
+    dulce_2 = undefined
+    factor = 0
+    antifactor = 0
   }
-  if ($("#timer").html()=="00:00") {
-    fin_del_juego()
-    return
+}
+
+
+
+//revisa elementos vivos en pantalla luego de los combos e indica donde agragar dulces
+function actualizar_html(){
+    var col_lista = []
+    var matriz = []
+
+    for (let columna = 1; columna <= 7; columna++) { //por columna
+      for (let fila = 1; fila <= 7; fila++) {   //por fila
+        var filai = $('.col-'+columna).find('.fila'+fila+' img')
+
+        if (filai.length == 2) {
+          if (!filai.eq(0).is(':hidden')) {
+            col_lista.push(filai.eq(0).attr('src'))
+          }
+        } else {
+          if (!filai.is(':hidden')) {
+            col_lista.push(filai.attr('src'))
+          }
+        }
+      }
+      matriz.push(col_lista)
+      col_lista = []
+    }
+    return matriz
+}
+
+
+//coloca nuevos dulces
+function rellenar_de_nuevo(matriz){
+  for (let i = 1; i <= 7; i++) { //por columnas
+    $('.col-'+i).find("div").remove()
+    for (let j = 7; j >= 1; j--) {//por fila
+      if (matriz[i-1][j-1] == undefined) {
+        $('.col-'+i).append(colocar_dulce(j))
+      } else {
+        var numero_imagen = matriz[i-1][j-1].substring(6,7)
+        $('.col-'+i).append(colocar_dulce(j,'no',numero_imagen))
+      }
+    }
   }
-  conteo2(tiempo)
- },1000);
+  actualizar_puntaje();
 }
 
 
-function conteo2(tiempo){setTimeout(function(){
-  tiempo-=1;
-  segundos=tiempo%60;
-  minutos=(tiempo-(tiempo%60))/60;
-  if (segundos<10) {
-    $("#timer").html("0"+minutos+":0"+segundos);
-  }else {
-    $("#timer").html("0"+minutos+":"+segundos);
+
+//actualiza el puntaje (1caramelo vale 2 puntos)
+function Puntaje(combos,de_donde){
+  if(combos=="reset"){
+    $(de_donde).text("0")
   }
-  if ($("#timer").html()=="00:00") {
-    fin_del_juego()
-    return
+  else{
+    var Puntaje_actual = $(de_donde).text()
+    var Total = Number(Puntaje_actual)+combos;
+    $(de_donde).text(Total.toString())
   }
-  conteo1(tiempo)
- },1000);
 }
 
 
-//proceso al finalizar el tiempo
-function fin_del_juego(){
-  $(".caja_dulce").detach();
-  $(".panel-tablero").animate({height:'0px',width:'0px',opacity:'0.0'},'slow');
-  $(".time").animate({opacity: '0'},'slow');
-  $(".panel-score").animate({width:'100%'},'slow');
-  $(".moves").animate({width:'100%'},'slow');
-  $(".panel-score").prepend('<div class="fin"><h1 class="findeljuego">Juego Terminado</h1></div>');
-  $(".fin").animate({width:'100%'},'slow');
-}
+  function asignacion_de_eventos_drag_drop(){
+
+    $('div[class^="col"]').find("div img").draggable({
+      start: function(event){
+        info_arrastrado.columna = $(event.target).parent().parent().attr('class').substring(4)
+        info_arrastrado.fila  = $(event.target).parent().attr('class').substring(13,14)
+        info_arrastrado.imagen  = $(event.target).attr('src')
+      }
+    });
+    $('div[class^="col"]').find("div img").droppable({
+      tolerance: "intersect",
+      drop: function(event){
+        info_movido.columna = $(event.target).parent().parent().attr('class').substring(4)
+        info_movido.fila  = $(event.target).parent().attr('class').substring(13,14)
+        info_movido.imagen  = $(event.target).attr('src')
+        puedo_moverme()
+      }
+    });
+  }
 
 
-function jugar_de_nuevo(){
-  $(".caja_dulce").detach();
-  $(".panel-tablero").animate({height:"700px",width:"70%",opacity:'1'});
-  $(".time").animate({opacity: '1'},'slow');
-  $(".panel-score").animate({width:"25%",height:"700px"},'slow');
-  $(".moves").animate({width:"100%",height:"23%"},"slow");
-  $(".fin").detach();
-  $("#score-text")["0"].innerText="0";
-  $("#movimientos-text")["0"].innerText="0";
-}
+  //es valida la jugada???
+  function puedo_moverme(){
+    Puntaje(1,'#movimientos-text')
+    var X_adonde = info_movido.columna - info_arrastrado.columna
+    var Y_adonde = info_movido.fila - info_arrastrado.fila
+    if (Math.abs(X_adonde)==1 && Y_adonde==0) {
+      animar_dulce(-X_adonde,Y_adonde)
+    }
+    else if (Math.abs(Y_adonde)==1 && X_adonde==0) {
+      animar_dulce(X_adonde,Y_adonde)
+    } else {
+      $('.col-'+info_arrastrado.columna+' .fila'+info_arrastrado.fila+' img').animate({
+        top: 0,
+        left: 0
+      },200)
+    }
+  }
 
-//inicializacion
 
+  //realiza animacion de dulces (como se mueven)
+  function animar_dulce(sentido_X,sentido_Y){
+    var top1 = sentido_Y*96;
+    var left1 = (sentido_X*100).toString()+'%';
+    $('.col-'+info_movido.columna+' .fila'+info_movido.fila+' img').animate({
+      top: top1,
+      left: left1
+    },250,function(){
+      moverse()
+    })
+  }
+
+
+  //cambio de aspecto real en html
+  function moverse(){
+    $('.col-'+info_arrastrado.columna+' .fila'+info_arrastrado.fila).find('img').detach()
+    $('.col-'+info_movido.columna+' .fila'+info_movido.fila).find('img').detach()
+    $('.col-'+info_arrastrado.columna+' .fila'+info_arrastrado.fila).append('<img src="'+info_movido.imagen+'">')
+    $('.col-'+info_movido.columna+' .fila'+info_movido.fila).append('<img src="'+info_arrastrado.imagen+'">')
+    actualizar_puntaje()
+  }
+
+
+  //inicio del reloj en retroceso
+  function conteo1(tiempo){setTimeout(function(){
+    tiempo-=1;
+    segundos=tiempo%60;
+    minutos=(tiempo-(tiempo%60))/60;
+    if (segundos<10) {
+      $("#timer").html("0"+minutos+":0"+segundos);
+    }else {
+      $("#timer").html("0"+minutos+":"+segundos);
+    }
+    if ($("#timer").html()=="00:00") {
+      fin_del_juego()
+      return
+    }
+    conteo2(tiempo)
+   },1000);
+  }
+
+
+  function conteo2(tiempo){setTimeout(function(){
+    tiempo-=1;
+    segundos=tiempo%60;
+    minutos=(tiempo-(tiempo%60))/60;
+    if (segundos<10) {
+      $("#timer").html("0"+minutos+":0"+segundos);
+    }else {
+      $("#timer").html("0"+minutos+":"+segundos);
+    }
+    if ($("#timer").html()=="00:00") {
+      fin_del_juego()
+      return
+    }
+    conteo1(tiempo)
+   },1000);
+  }
+
+
+  //proceso al finalizar el tiempo
+  function fin_del_juego(){
+    $(".caja_dulce").detach();
+    $(".panel-tablero").animate({height:'0px',width:'0px',opacity:'0.0'},'slow');
+    $(".time").animate({opacity: '0'},'slow');
+    $(".panel-score").animate({width:'100%'},'slow');
+    $(".moves").animate({width:'100%'},'slow');
+    $(".panel-score").prepend('<div class="fin"><h1 class="findeljuego">Juego Terminado</h1></div>');
+    $(".fin").animate({width:'100%'},'slow');
+  }
+
+
+
+
+
+//inicializacion de pagina
 $(document).ready(function(){
-
-animacion_letras() //llamado de funcion de animacion de letras del titulo
-
-inicializar_matriz_tablero()//llama funcion para inicializar la matriz del tablero
-
-$(".btn-reinicio").click(function(){
-var inicio=120; //segundos en los que comienza el reloj
-  if ($(this).html()=="Iniciar") {
-      conteo_de_caramelos=0;
-      conteo_de_cajas=0;
-      puntaje=0;
-      movimientos=0;
+  var inicio=120; //segundos en los que comienza el reloj
+  //cambiar color del titulo
+  animacion_letras()
+  //click del boton inicio
+  $('.btn-reinicio').on('click',function(){
+    if ($(this).text() == "Iniciar") { //inicia juego
+      $(this).text('Reiniciar'); //cambia el texto
       llenado_inicial()
-      $(this).html("Reiniciar");
-      verificar_combos()
-      conteo1(inicio)  //inicio del contador en segundos
-  }else {
-      jugar_de_nuevo()
-      conteo_de_caramelos=0;
-      conteo_de_cajas=0;
-      puntaje=0;
-      movimientos=0;
-      llenado_inicial()
-      verificar_combos()
-      conteo1(inicio)  //inicio del contador en segundos
-  }
-  eventos()
+      actualizar_puntaje()
+      conteo1(inicio)
+    }
+    else { //reinicia juego
+      location.reload()
+    }
+  })
+
 })
-
-});
